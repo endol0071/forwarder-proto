@@ -6,11 +6,13 @@ import {
   Param,
   Query,
   Redirect,
+  Res,
 } from '@nestjs/common';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import puppeteer from 'puppeteer';
 import { AppService } from './app.service';
+import type { Response } from 'express';
 
 @Controller()
 export class AppController {
@@ -98,12 +100,62 @@ export class AppController {
   }
 
   @Get('/goods/:id')
-  @Redirect(undefined, 301)
   redirectToGoods(
+    @Param('id') id: string,
+    @Headers('user-agent') userAgent = '',
+    @Res() res: Response,
+  ) {
+    console.log('redirectToGoods user-agent:', userAgent);
+
+    const isMobileClient = /iPhone|iPad|iPod|Android/i.test(userAgent);
+    const webUrl = `https://www.kurly.com/goods/${id}`;
+    const deepLink = `kurly://product?no=${id}&referrer=select_related_product`;
+
+    if (!isMobileClient) {
+      return res.redirect(301, webUrl);
+    }
+
+    const html = `<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kurly 상품으로 이동 중...</title>
+    <script>
+      (function () {
+        var fallbackUrl = '${webUrl}';
+        var deepLinkUrl = '${deepLink}';
+        var fallbackTimer = setTimeout(function () {
+          window.location.replace(fallbackUrl);
+        }, 1500);
+
+        window.location.href = deepLinkUrl;
+
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden) {
+            clearTimeout(fallbackTimer);
+          }
+        });
+      })();
+    </script>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-align: center; margin: 3rem 1rem; }
+    </style>
+  </head>
+  <body>
+    <p>컬리 앱을 여는 중입니다. 자동으로 이동하지 않으면 <a href="${webUrl}">여기</a>를 눌러주세요.</p>
+  </body>
+</html>`;
+
+    return res.status(200).type('text/html').send(html);
+  }
+
+  @Get('/goods-test/:id')
+  @Redirect(undefined, 301)
+  redirectToGoodsTest(
     @Param('id') id: string,
     @Headers('user-agent') userAgent?: string,
   ) {
-    console.log('redirectToGoods user-agent:', userAgent);
+    console.log('redirectToGoodsTest user-agent:', userAgent);
 
     const isIosMobile =
       typeof userAgent === 'string' && /iPhone|iPad|iPod/i.test(userAgent);
@@ -111,12 +163,10 @@ export class AppController {
       typeof userAgent === 'string' && /Android/i.test(userAgent);
 
     const shouldUseDeepLink = isIosMobile || isAndroidMobile;
+    const deepLink = `kurly://product?no=${id}&referrer=select_related_product`;
+    const webUrl = `https://www.kurly.com/goods/${id}`;
 
-    const url = shouldUseDeepLink
-      ? `kurly://product?no=${id}&referrer=select_related_product`
-      : `https://www.kurly.com/goods/${id}`;
-
-    return { url };
+    return { url: shouldUseDeepLink ? deepLink : webUrl };
   }
 
   @Get('/redirect')
