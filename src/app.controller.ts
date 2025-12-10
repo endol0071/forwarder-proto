@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Headers,
   Param,
   Query,
   Redirect,
@@ -98,17 +99,33 @@ export class AppController {
 
   @Get('/goods/:id')
   @Redirect(undefined, 301)
-  redirectToGoods(@Param('id') id: string) {
-    return { url: `https://www.kurly.com/goods/${id}` };
+  redirectToGoods(
+    @Param('id') id: string,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    console.log('redirectToGoods user-agent:', userAgent);
+
+    const isIosMobile =
+      typeof userAgent === 'string' && /iPhone|iPad|iPod/i.test(userAgent);
+
+    const url = isIosMobile
+      ? `kurly://product?no=${id}&referrer=select_related_product`
+      : `https://www.kurly.com/goods/${id}`;
+
+    return { url };
   }
 
   @Get('/redirect')
   @Redirect(undefined, 301)
-  redirectToCustomUrl(@Query('to') to?: string) {
+  redirectToCustomUrl(
+    @Query('to') to?: string,
+    @Headers('user-agent') userAgent?: string,
+  ) {
     if (!to) {
       throw new BadRequestException('`to` query parameter is required.');
     }
 
+    console.log('redirectToCustomUrl user-agent:', userAgent);
     return { url: to };
   }
 }
