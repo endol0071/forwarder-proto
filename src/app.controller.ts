@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Query, Redirect } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  Query,
+  Redirect,
+} from '@nestjs/common';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import puppeteer from 'puppeteer';
@@ -93,5 +100,15 @@ export class AppController {
   @Redirect(undefined, 301)
   redirectToGoods(@Param('id') id: string) {
     return { url: `https://www.kurly.com/goods/${id}` };
+  }
+
+  @Get('/redirect')
+  @Redirect(undefined, 301)
+  redirectToCustomUrl(@Query('to') to?: string) {
+    if (!to) {
+      throw new BadRequestException('`to` query parameter is required.');
+    }
+
+    return { url: to };
   }
 }
