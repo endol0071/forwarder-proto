@@ -107,8 +107,12 @@ export class AppController {
 
     const isIosMobile =
       typeof userAgent === 'string' && /iPhone|iPad|iPod/i.test(userAgent);
+    const isAndroidMobile =
+      typeof userAgent === 'string' && /Android/i.test(userAgent);
 
-    const url = isIosMobile
+    const shouldUseDeepLink = isIosMobile || isAndroidMobile;
+
+    const url = shouldUseDeepLink
       ? `kurly://product?no=${id}&referrer=select_related_product`
       : `https://www.kurly.com/goods/${id}`;
 
